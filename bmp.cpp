@@ -19,6 +19,8 @@ private:
     unsigned int size_bf;
     BITMAPFILEHEADER* header;
     char* image;
+    unsigned int width;
+    unsigned int height;
 public:
     
     bmp (const char* path);
@@ -26,6 +28,8 @@ public:
     char* get_image ();
     BITMAPFILEHEADER* get_header ();
     void load_to_image (const char* path);
+    unsigned int get_height () const;
+    unsigned int get_width () const;
     
     ~bmp();
 };
@@ -35,8 +39,14 @@ public:
 
 int main () {
     bmp kotik ("kotik.bmp");
-    char* image = kotik.get_image ();
-    kotik.load_to_image ("kot(1).bmp");
+    bmp background ("back.bmp");
+    char* kotik_i = kotik.get_image ();
+    char* back_i = background.get_image ();
+    printf ("w = %u h = %u\n", kotik.get_width (), kotik.get_height ());
+    
+
+    background.load_to_image ("kot(1).bmp");
+
     return 0;
 }
 
@@ -55,6 +65,8 @@ bmp::bmp (const char* path)
     get_bf (f_in);
     header = new BITMAPFILEHEADER (bf);
     image = (bf + header->bfOffBits);
+    width  = *((unsigned int*) (bf + 18));
+    height = *((unsigned int*) (bf + 22));
     fclose (f_in);
 }
 
@@ -89,4 +101,12 @@ BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
         bfReserved1 = *(unsigned short int*) (bf + 6);
         bfReserved2 = *(unsigned short int*) (bf + 8);
         bfOffBits   = *(unsigned int*) (bf + 10);
+}
+
+unsigned int bmp::get_height () const {
+    return height;
+}
+
+unsigned int bmp::get_width () const {
+    return width;
 }
