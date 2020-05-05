@@ -34,7 +34,8 @@ public:
 
 int main () {
     bmp kotik ("kotik.bmp");
-    printf ("%u\n", kotik);
+    char* image = kotik.get_image ();
+    for (int i =0; i < )
     return 0;
 }
 
@@ -47,15 +48,16 @@ BITMAPFILEHEADER* bmp::get_header () {
     return header;
 }
 
-bmp::bmp(const char* path)
+bmp::bmp (const char* path)
 {
     FILE* f_in = fopen (path, "rb");
     get_bf (f_in);
     header = new BITMAPFILEHEADER (bf);
     image = (bf + header->bfOffBits);
+    fclose (f_in);
 }
 
-bmp::~bmp()
+bmp::~bmp ()
 {
     delete[] (bf);
     delete header;
