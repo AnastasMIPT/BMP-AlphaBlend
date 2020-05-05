@@ -3,13 +3,7 @@
 
 struct BITMAPFILEHEADER
 {
-    BITMAPFILEHEADER (char* bf) {
-        bfType = *(unsigned int*) bf;
-        bfSize = *(unsigned int*) (bf + 2);
-        bfReserved1 = *(unsigned short int*) (bf + 6);
-        bfReserved2 = *(unsigned short int*) (bf + 8);
-        bfOffBits   = *(unsigned int*) (bf + 10);
-    }
+    BITMAPFILEHEADER (char* bf);
     unsigned int bfType;
     unsigned int bfSize;
     unsigned short int bfReserved1;
@@ -78,4 +72,12 @@ void bmp::get_bf (FILE* f_in) {
     fread(bf, sizeof (char), size_bf, f_in);
 
     
+}
+
+BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
+        bfType = *(unsigned int*) bf;
+        bfSize = *(unsigned int*) (bf + 2);
+        bfReserved1 = *(unsigned short int*) (bf + 6);
+        bfReserved2 = *(unsigned short int*) (bf + 8);
+        bfOffBits   = *(unsigned int*) (bf + 10);
 }
