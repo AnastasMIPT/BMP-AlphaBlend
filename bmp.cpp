@@ -25,6 +25,7 @@ public:
     void get_bf (FILE* f_in);
     char* get_image ();
     BITMAPFILEHEADER* get_header ();
+    void load_to_image (const char* path);
     
     ~bmp();
 };
@@ -35,7 +36,7 @@ public:
 int main () {
     bmp kotik ("kotik.bmp");
     char* image = kotik.get_image ();
-    for (int i =0; i < )
+    kotik.load_to_image ("kot(1).bmp");
     return 0;
 }
 
@@ -74,6 +75,12 @@ void bmp::get_bf (FILE* f_in) {
     fread(bf, sizeof (char), size_bf, f_in);
 
     
+}
+
+void bmp::load_to_image (const char* path) {
+    FILE* f_out = fopen (path, "wb");
+    fwrite (bf, sizeof (char), size_bf, f_out);
+    fclose (f_out);
 }
 
 BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
