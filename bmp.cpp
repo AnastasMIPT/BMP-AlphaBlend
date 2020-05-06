@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <cstdlib>
+#include <cmath>
 
 struct BITMAPFILEHEADER
 {
@@ -42,8 +43,31 @@ int main () {
     bmp background ("back.bmp");
     char* kotik_i = kotik.get_image ();
     char* back_i = background.get_image ();
-    printf ("w = %u h = %u\n", kotik.get_width (), kotik.get_height ());
-    
+    printf ("w = %u h = %u BW = %u\n", kotik.get_width (), kotik.get_height (), background.get_width ());
+    unsigned int width = kotik.get_width ();
+    unsigned int height = kotik.get_height ();
+    unsigned int width2 = background.get_width ();
+    unsigned int oft = 0;
+    unsigned int oft2 = 0;
+    for (unsigned int i = 0; i < abs (height); ++i) {
+        for (unsigned int j = 0; j < abs (width * 4); j += 4) {
+        oft = i * width * 4;
+        oft2 = i * width2 * 4;
+        for (unsigned int k = 0; k < 4; ++k) {
+            if (kotik_i[oft + j + 3] == 0) break;
+            double a = (double) (((double) kotik_i[oft + j + 3]) * (1.00/ 255.00));
+            double not_a = 1.00 - a;
+            //back_i[oft2 + j + k] = (back_i[oft2 + j + k] * (0xFF - kotik_i[oft + j + 3]) + back_i[oft2 + j + k] * kotik_i[oft + j + 3]) >> 8;
+            back_i[oft2 + j + k] = double (back_i[oft2 + j + k] * not_a) + kotik_i[oft + j + k];
+        }
+        //printf ("i = %u j = %u\n", i, j);
+        // back_i[oft2 + j + 0] = 0;
+        // back_i[oft2 + j + 1] = 128;
+        // back_i[oft2 + j + 2] = 255;
+        // back_i[oft2 + j + 3] = 255;
+
+        }
+    }
 
     background.load_to_image ("kot(1).bmp");
 
