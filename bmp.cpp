@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cstdlib>
 #include <cmath>
+#include <cstring>
 
 struct BITMAPFILEHEADER
 {
@@ -44,42 +45,45 @@ public:
     ~bmp();
 };
 
-pixel blend_pixels (pixel& src, pixel& dst) {
+pixel blend_pixels_x1 (pixel& src, pixel& dst) {
     if (src.alpha == 0) return dst;
     float f_alpha = (float)((double)(src.alpha)* (1.0 / 255.0));	
     float not_a = 1.0f - f_alpha;
+    //printf ("%f\n", not_a);
     pixel res;
-    res.blue = lround(float(dst.blue) * not_a) + src.blue;	
-    res.green = lround(float(dst.green) * not_a) + src.green;
-    res.red = lround(float(dst.red) * not_a) + src.red;
-    res.alpha= lround(float(dst.alpha) * not_a) + src.alpha;
-    
+    res.blue =  lround (float(dst.blue) * not_a) + src.blue;	
+    res.green = lround (float(dst.green) * not_a) + src.green;
+    res.red =   lround (float(dst.red) * not_a) + src.red;
+    res.alpha=  lround (float(dst.alpha) * not_a) + src.alpha;
+    //printf ("res.alpha = %u src.alpha = %u lround = %u\n", res.alpha, src.alpha, lround(float(dst.alpha) * not_a));
+    if (res.alpha != 255) printf ("res_alpha = %u\n", res.alpha); 
     return res;	
 }
 int main () {
-    bmp kotik ("kotik.bmp");
+    bmp kotik ("AskhatCat.bmp");
     bmp background ("back.bmp");
     pixel* kotik_i = kotik.get_image ();
     pixel* back_i = background.get_image ();
-    printf ("w = %u h = %u BW = %u\n", kotik.get_width (), kotik.get_height (), background.get_width ());
+    //printf ("w = %u h = %u BW = %u\n", kotik.get_width (), kotik.get_height (), background.get_width ());
     unsigned int width = kotik.get_width ();
     unsigned int height = kotik.get_height ();
     unsigned int width2 = background.get_width ();
     unsigned int oft = 0;
     unsigned int oft2 = 0;
+    uint oft_start = 1920 * 100 + 600;
     for (unsigned int i = 0; i < abs (height); ++i) {
         for (unsigned int j = 0; j < abs (width); ++j) {
             oft = i * width;
             oft2 = i * width2;
-            back_i[oft2 + j] = blend_pixels (kotik_i[oft + j],back_i[oft2 + j]);
+            back_i[oft2 + oft_start + j] = blend_pixels_x1 (kotik_i[oft + j],back_i[oft2 + oft_start + j]);
         
         }
     }
-
-    background.load_to_image ("kot(1).bmp");
-
+    background.load_to_image ("result.bmp");
+    
     return 0;
 }
+
 
 
 pixel* bmp::get_image () {
@@ -122,6 +126,12 @@ void bmp::get_bf (FILE* f_in) {
 
 void bmp::load_to_image (const char* path) {
     FILE* f_out = fopen (path, "wb");
+    if (!f_out) {
+        const char * command = strcat ("touch ", path);
+        system (command);
+        f_out = fopen (path, "wb");
+    }
+    
     fwrite (bf, sizeof (char), size_bf, f_out);
     fclose (f_out);
 }
