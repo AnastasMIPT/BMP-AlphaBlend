@@ -42,7 +42,7 @@ public:
     void load_to_image (const char* path) const;
     uint get_height () const;
     uint get_width () const;
-    void alpha_blend (const bmp& front, const char* path_result = "blend_result.bmp");
+    void alpha_blend (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0, const char* path_result = "blend_result.bmp");
 
     ~bmp();
 };
@@ -64,24 +64,29 @@ int main () {
     bmp kotik ("AskhatCat.bmp");
     bmp background ("back.bmp");
     
-    kotik.alpha_blend (background);
+    background.alpha_blend (kotik, 600, 300);
     return 0;
 }
 
-void bmp::alpha_blend (const bmp& front, const char* path_result) {
+void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y, const char* path_result) {
     pixel* kotik_i = front.get_image ();
     
     unsigned int f_width = front.get_width ();
     unsigned int f_height = front.get_height ();
 
     if (f_width > width || f_height > height) {
-        printf ("ERROR in alpha_blend(): necessary f_width <= width && f_height <= height!\n");
+        printf ("ERROR in alpha_blend(): necessary front_width <= back_width && front_height <= back_height!\n");
         return;
     }
-    
+
+    if (pos_x > width || pos_y > height) {
+        printf ("ERROR in alpha_blend(): necessary pos_x <= back_width && pos_y <= back_height!\n");
+        return;
+    }
+
     unsigned int oft = 0;
     unsigned int oft2 = 0;
-    uint oft_start = 1920 * 100 + 600;
+    uint oft_start = width * pos_y + pos_x;
     for (unsigned int i = 0; i < abs (f_height); ++i) {
         for (unsigned int j = 0; j < abs (f_width); ++j) {
             oft = i * f_width;
