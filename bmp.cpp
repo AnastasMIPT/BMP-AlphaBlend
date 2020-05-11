@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
+#include <cassert>
 
 struct BITMAPFILEHEADER
 {
@@ -50,21 +51,20 @@ pixel blend_pixels_x1 (pixel& src, pixel& dst) {
     if (src.alpha == 0) return dst;
     float f_alpha = (float)((double)(src.alpha)* (1.0 / 255.0));	
     float not_a = 1.0f - f_alpha;
-    //printf ("%f\n", not_a);
+    
     pixel res;
     res.blue =  lround (float(dst.blue) * not_a) + src.blue;	
     res.green = lround (float(dst.green) * not_a) + src.green;
     res.red =   lround (float(dst.red) * not_a) + src.red;
     res.alpha=  lround (float(dst.alpha) * not_a) + src.alpha;
-    //printf ("res.alpha = %u src.alpha = %u lround = %u\n", res.alpha, src.alpha, lround(float(dst.alpha) * not_a));
-    if (res.alpha != 255) printf ("res_alpha = %u\n", res.alpha); 
+    
     return res;	
 }
 int main () {
     bmp kotik ("AskhatCat.bmp");
     bmp background ("back.bmp");
-    background.alpha_blend (kotik);
     
+    kotik.alpha_blend (background);
     return 0;
 }
 
@@ -73,6 +73,12 @@ void bmp::alpha_blend (const bmp& front, const char* path_result) {
     
     unsigned int f_width = front.get_width ();
     unsigned int f_height = front.get_height ();
+
+    if (f_width > width || f_height > height) {
+        printf ("ERROR in alpha_blend(): necessary f_width <= width && f_height <= height!\n");
+        return;
+    }
+    
     unsigned int oft = 0;
     unsigned int oft2 = 0;
     uint oft_start = 1920 * 100 + 600;
