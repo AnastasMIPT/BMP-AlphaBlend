@@ -7,11 +7,11 @@
 struct BITMAPFILEHEADER
 {
     BITMAPFILEHEADER (char* bf);
-    unsigned int bfType;
-    unsigned int bfSize;
+    unsigned int       bfType;
+    unsigned int       bfSize;
     unsigned short int bfReserved1;
     unsigned short int bfReserved2;
-    unsigned int bfOffBits;
+    unsigned int       bfOffBits;
 };
 
 
@@ -35,43 +35,57 @@ private:
     uint height;
 public:
     
-    bmp (const char* path);
-    void get_bf (FILE* f_in);
-    pixel* get_image () const;
+    bmp                          (const char* path);
+    void get_bf                  (FILE* f_in);
+    pixel* get_image             () const;
     BITMAPFILEHEADER* get_header () const;
-    void load_to_image (const char* path) const;
-    uint get_height () const;
-    uint get_width () const;
-    void alpha_blend (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0, const char* path_result = "blend_result.bmp");
-
-    ~bmp();
+    void load_to_image           (const char* path) const;
+    uint get_height              () const;
+    uint get_width               () const;
+    void alpha_blend             (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0, 
+                                  const char* path_result = "blend_result.bmp");
+    void alpha_blend_fast        (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0,
+                                  const char* path_result = "blend_result.bmp");
+    ~bmp                         ();
 };
+
+
+int main () {
+    bmp kotik      ("kotik.bmp");
+    bmp background ("back.bmp");
+    
+    background.alpha_blend (kotik, 600, 100);
+    return 0;
+}
+
+
+void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0,
+                            const char* path_result = "blend_result.bmp") {
+
+}
+
+
 
 pixel blend_pixels_x1 (pixel& src, pixel& dst) {
     if (src.alpha == 0) return dst;
-    float f_alpha = (float)((double)(src.alpha)* (1.0 / 255.0));	
-    float not_a = 1.0f - f_alpha;
+    
+    float f_alpha = (float)((double)(src.alpha) * (1.0 / 255.0));	
+    float not_a   = 1.0f - f_alpha;
     
     pixel res;
-    res.blue =  lround (float(dst.blue) * not_a) + src.blue;	
-    res.green = lround (float(dst.green) * not_a) + src.green;
-    res.red =   lround (float(dst.red) * not_a) + src.red;
-    res.alpha=  lround (float(dst.alpha) * not_a) + src.alpha;
+    
+    res.blue  = lround (float (dst.blue)  * not_a) + src.blue;	
+    res.green = lround (float (dst.green) * not_a) + src.green;
+    res.red   = lround (float (dst.red)   * not_a) + src.red;
+    res.alpha = lround (float (dst.alpha) * not_a) + src.alpha;
     
     return res;	
-}
-int main () {
-    bmp kotik ("AskhatCat.bmp");
-    bmp background ("back.bmp");
-    
-    background.alpha_blend (kotik, 600, 300);
-    return 0;
 }
 
 void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y, const char* path_result) {
     pixel* kotik_i = front.get_image ();
     
-    unsigned int f_width = front.get_width ();
+    unsigned int f_width  = front.get_width  ();
     unsigned int f_height = front.get_height ();
 
     if (f_width > width || f_height > height) {
@@ -84,17 +98,19 @@ void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y,
         return;
     }
 
-    unsigned int oft = 0;
+    unsigned int oft  = 0;
     unsigned int oft2 = 0;
     uint oft_start = width * pos_y + pos_x;
+    
     for (unsigned int i = 0; i < abs (f_height); ++i) {
         for (unsigned int j = 0; j < abs (f_width); ++j) {
-            oft = i * f_width;
+            oft  = i * f_width;
             oft2 = i * width;
             image[oft2 + oft_start + j] = blend_pixels_x1 (kotik_i[oft + j], image[oft2 + oft_start + j]);
         
         }
     }
+    
     load_to_image (path_result);
 
 }
@@ -111,31 +127,37 @@ bmp::bmp (const char* path)
 {
     FILE* f_in = fopen (path, "rb");
     get_bf (f_in);
+
     header = new BITMAPFILEHEADER (bf);
-    image = (pixel*) (bf + header->bfOffBits);
+    image  = (pixel*) (bf + header->bfOffBits);
+    
     width  = *((unsigned int*) (bf + 18));
     height = *((unsigned int*) (bf + 22));
+    
     fclose (f_in);
 }
 
 bmp::~bmp ()
 {
-    delete[] (bf);
-    delete header;
+    delete[] bf;
+    delete   header;
 }
 
 void bmp::get_bf (FILE* f_in) {
-    fseek(f_in, 0, SEEK_END);
-    size_bf = ftell(f_in);
-    rewind(f_in);
+    
+    fseek  (f_in, 0, SEEK_END);
+    size_bf = ftell (f_in);
+    rewind (f_in);
     
     bf = new char [size_bf + 1];
 
-    fread(bf, sizeof (char), size_bf, f_in);    
+    fread (bf, sizeof (char), size_bf, f_in);    
 }
 
 void bmp::load_to_image (const char* path) const {
+    
     FILE* f_out = fopen (path, "wb");
+    
     if (!f_out) {
         const char * command = strcat ("touch ", path);
         system (command);
@@ -147,17 +169,17 @@ void bmp::load_to_image (const char* path) const {
 }
 
 BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
-        bfType = *(unsigned int*) bf;
-        bfSize = *(unsigned int*) (bf + 2);
+        bfType      = *(unsigned int*)        bf;
+        bfSize      = *(unsigned int*)       (bf + 2);
         bfReserved1 = *(unsigned short int*) (bf + 6);
         bfReserved2 = *(unsigned short int*) (bf + 8);
-        bfOffBits   = *(unsigned int*) (bf + 10);
+        bfOffBits   = *(unsigned int*)       (bf + 10);
 }
 
 unsigned int bmp::get_height () const {
     return height;
 }
 
-unsigned int bmp::get_width () const {
+unsigned int bmp::get_width  () const {
     return width;
 }
