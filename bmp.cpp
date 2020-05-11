@@ -3,6 +3,9 @@
 #include <cmath>
 #include <cstring>
 #include <cassert>
+#include <emmintrin.h>
+#include <pmmintrin.h>
+
 
 struct BITMAPFILEHEADER
 {
@@ -54,13 +57,50 @@ int main () {
     bmp kotik      ("kotik.bmp");
     bmp background ("back.bmp");
     
-    background.alpha_blend (kotik, 600, 100);
+    background.alpha_blend_fast (kotik, 600, 100);
     return 0;
+}
+
+void blend_pixels_x4 (__m128i* front, __m128i* back) {
+    __m128i front_pxls = _mm_lddqu_si128 (front);
+    _mm_storeu_si128 (back, front_pxls);
 }
 
 
 void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x, unsigned int pos_y,
                             const char* path_result) {
+    pixel* front_i = front.get_image ();
+    
+    uint f_width  = front.get_width  ();
+    uint f_height = front.get_height ();
+
+    if (f_width > width || f_height > height) {
+        printf ("ERROR in alpha_blend(): necessary front_width <= back_width && front_height <= back_height!\n");
+        return;
+    }
+
+    if (pos_x > width || pos_y > height) {
+        printf ("ERROR in alpha_blend(): necessary pos_x <= back_width && pos_y <= back_height!\n");
+        return;
+    }
+
+    uint oft       = 0;
+    uint oft2      = 0;
+    uint oft_start = width * pos_y + pos_x;
+    
+    for (uint i = 0; i < f_height; ++i) {
+        for (uint j = 0; j < f_width; j += 4) {
+            oft  = i * f_width;
+            oft2 = i * width;
+            //printf ("i = %u\n", i);
+            blend_pixels_x4 ((__m128i*) (front_i + oft + j),
+                             (__m128i*) (image + oft2 + oft_start + j));
+        
+        }
+    }
+    
+    load_to_image (path_result);
+
 
 }
 
@@ -83,7 +123,7 @@ pixel blend_pixels_x1 (pixel& src, pixel& dst) {
 }
 
 void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y, const char* path_result) {
-    pixel* kotik_i = front.get_image ();
+    pixel* front_i = front.get_image ();
     
     uint f_width  = front.get_width  ();
     uint f_height = front.get_height ();
@@ -102,11 +142,11 @@ void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y,
     uint oft2      = 0;
     uint oft_start = width * pos_y + pos_x;
     
-    for (uint i = 0; i < abs (f_height); ++i) {
-        for (uint j = 0; j < abs (f_width); ++j) {
+    for (uint i = 0; i < f_height; ++i) {
+        for (uint j = 0; j < f_width; ++j) {
             oft  = i * f_width;
             oft2 = i * width;
-            image[oft2 + oft_start + j] = blend_pixels_x1 (kotik_i[oft + j], image[oft2 + oft_start + j]);
+            image[oft2 + oft_start + j] = blend_pixels_x1 (front_i[oft + j], image[oft2 + oft_start + j]);
         
         }
     }
