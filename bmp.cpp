@@ -5,7 +5,8 @@
 #include <cassert>
 #include <emmintrin.h>
 #include <pmmintrin.h>
-
+#include <xmmintrin.h>
+#include <smmintrin.h>
 
 struct BITMAPFILEHEADER
 {
@@ -62,8 +63,57 @@ int main () {
 }
 
 void blend_pixels_x4 (__m128i* front, __m128i* back) {
-    __m128i front_pxls = _mm_lddqu_si128 (front);
-    _mm_storeu_si128 (back, front_pxls);
+    const static __m128i zero  = _mm_set_epi8 (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const static __m128i alpha = _mm_set_epi8 (255, 14, 255, 14, 255, 14, 255, 14,
+                                               255, 6, 255, 6, 255, 6, 255, 6);
+    const static __m128i extend_255 = _mm_set_epi8 (0, 255, 0, 255, 0, 255, 0, 255,
+                                                    0, 255, 0, 255, 0, 255, 0, 255);
+
+    __m128i front_pxls = _mm_lddqu_si128 (front);       //4 pixels in 16 bytes
+    __m128i back_pxls  = _mm_lddqu_si128 (back);
+    
+    __m128i low_pixels_b = (__m128i) _mm_movelh_ps ((__m128) back_pxls,  (__m128) zero);  // zero in upper 8 bytes and 2 pixels in lower 8 bytes
+    __m128i low_pixels_f = (__m128i) _mm_movelh_ps ((__m128) front_pxls, (__m128) zero);
+
+
+    //extend low pixels for correct multiplication
+    low_pixels_b = _mm_cvtepu8_epi16 (low_pixels_b);
+    low_pixels_f = _mm_cvtepu8_epi16 (low_pixels_f);
+    
+
+    __m128i low_alpha_f =  _mm_shuffle_epi8 (low_pixels_f, alpha);
+    
+   
+    low_pixels_b = _mm_mullo_epi16 (low_pixels_b, _mm_sub_epi16   (extend_255,   low_alpha_f));
+    low_pixels_b = _mm_add_epi16   (low_pixels_b, _mm_mullo_epi16 (low_pixels_f, low_alpha_f));
+    low_pixels_b = _mm_srli_epi16  (low_pixels_b, 8);
+    
+    low_pixels_b = _mm_shuffle_epi8 (low_pixels_b, _mm_set_epi8 (255, 255, 255, 255, 255, 255, 255, 255,
+                                                                 14, 12, 10, 8, 6, 4, 2, 0));
+
+
+
+
+
+    __m128i up_pixels_b  = (__m128i) _mm_movehl_ps ((__m128) zero, (__m128) back_pxls);  // zero in upper 8 bytes and 2 pixels in lower 8 bytes
+    __m128i up_pixels_f  = (__m128i) _mm_movehl_ps ((__m128) zero, (__m128) front_pxls);
+
+    up_pixels_b  = _mm_cvtepu8_epi16 (low_pixels_b);
+    up_pixels_f  = _mm_cvtepu8_epi16 (low_pixels_f);
+
+    __m128i up_alpha_f  = _mm_shuffle_epi8 (up_pixels_f,  alpha);
+
+
+    up_pixels_b  = _mm_mullo_epi16 (up_pixels_b, _mm_sub_epi16   (extend_255, up_alpha_f));
+    up_pixels_b  = _mm_add_epi16   (up_pixels_b, _mm_mullo_epi16 (up_pixels_f, up_alpha_f));
+    up_pixels_b  = _mm_srli_epi16  (up_pixels_b, 8);
+
+    up_pixels_b  = _mm_shuffle_epi8 (up_pixels_b,  _mm_set_epi8 (14, 12, 10, 8, 6, 4, 2, 0,
+                                                                 255, 255, 255, 255, 255, 255, 255, 255));  
+    
+    
+    back_pxls   = _mm_or_si128 (up_pixels_b, low_pixels_b);                                                     
+    _mm_storeu_si128 (back, back_pxls);
 }
 
 
