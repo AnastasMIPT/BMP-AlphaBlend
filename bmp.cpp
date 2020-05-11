@@ -59,8 +59,8 @@ int main () {
 }
 
 
-void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0,
-                            const char* path_result = "blend_result.bmp") {
+void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x, unsigned int pos_y,
+                            const char* path_result) {
 
 }
 
@@ -85,8 +85,8 @@ pixel blend_pixels_x1 (pixel& src, pixel& dst) {
 void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y, const char* path_result) {
     pixel* kotik_i = front.get_image ();
     
-    unsigned int f_width  = front.get_width  ();
-    unsigned int f_height = front.get_height ();
+    uint f_width  = front.get_width  ();
+    uint f_height = front.get_height ();
 
     if (f_width > width || f_height > height) {
         printf ("ERROR in alpha_blend(): necessary front_width <= back_width && front_height <= back_height!\n");
@@ -98,12 +98,12 @@ void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y,
         return;
     }
 
-    unsigned int oft  = 0;
-    unsigned int oft2 = 0;
+    uint oft       = 0;
+    uint oft2      = 0;
     uint oft_start = width * pos_y + pos_x;
     
-    for (unsigned int i = 0; i < abs (f_height); ++i) {
-        for (unsigned int j = 0; j < abs (f_width); ++j) {
+    for (uint i = 0; i < abs (f_height); ++i) {
+        for (uint j = 0; j < abs (f_width); ++j) {
             oft  = i * f_width;
             oft2 = i * width;
             image[oft2 + oft_start + j] = blend_pixels_x1 (kotik_i[oft + j], image[oft2 + oft_start + j]);
@@ -131,8 +131,8 @@ bmp::bmp (const char* path)
     header = new BITMAPFILEHEADER (bf);
     image  = (pixel*) (bf + header->bfOffBits);
     
-    width  = *((unsigned int*) (bf + 18));
-    height = *((unsigned int*) (bf + 22));
+    width  = *((uint*) (bf + 18));
+    height = *((uint*) (bf + 22));
     
     fclose (f_in);
 }
@@ -176,10 +176,10 @@ BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
         bfOffBits   = *(unsigned int*)       (bf + 10);
 }
 
-unsigned int bmp::get_height () const {
+uint bmp::get_height () const {
     return height;
 }
 
-unsigned int bmp::get_width  () const {
+uint bmp::get_width  () const {
     return width;
 }
