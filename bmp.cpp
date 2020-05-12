@@ -7,6 +7,10 @@
 #include <pmmintrin.h>
 #include <xmmintrin.h>
 #include <smmintrin.h>
+#include <ctime>
+#include <iostream>
+
+#pragma GCC diagnostic error "-Wold-style-cast"
 
 struct BITMAPFILEHEADER
 {
@@ -40,16 +44,23 @@ private:
 public:
     
     bmp                          (const char* path);
+
+    bmp                          (const bmp& image) = delete;
+    bmp& operator=               (const bmp& image) = delete;
+
     void get_bf                  (FILE* f_in);
     pixel* get_image             () const;
     BITMAPFILEHEADER* get_header () const;
-    void load_to_image           (const char* path) const;
     uint get_height              () const;
     uint get_width               () const;
+
+    void load_to_image           (const char* path) const;
+    
     void alpha_blend             (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0, 
                                   const char* path_result = "blend_result.bmp");
     void alpha_blend_fast        (const bmp& front, unsigned int pos_x = 0, unsigned int pos_y = 0,
                                   const char* path_result = "blend_result.bmp");
+    
     ~bmp                         ();
 };
 
@@ -58,25 +69,43 @@ int main () {
     bmp kotik      ("kotik.bmp");
     bmp background ("back.bmp");
     
-    background.alpha_blend_fast (kotik, 600, 100);
+    clock_t time = clock();
+    for (int i = 0; i < 3000; ++i) {
+        background.alpha_blend_fast (kotik, 600, 100);
+    }
+    std::cout << "SSE: " << double (clock () - time) / CLOCKS_PER_SEC << std::endl;
+    
+    
+    clock_t time2 = clock();
+    for (int i = 0; i < 3000; ++i) {
+        background.alpha_blend (kotik, 600, 100);
+    }
+    std::cout << "No SSE: " << double (clock () - time2) / CLOCKS_PER_SEC << std::endl;
+
     return 0;
 }
 
+
+
 void blend_pixels_x4 (__m128i* front, __m128i* back) {
-    const static __m128i zero  = _mm_set_epi8 (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    const static __m128i alpha = _mm_set_epi8 (255, 14, 255, 14, 255, 14, 255, 14,
-                                               255, 6, 255, 6, 255, 6, 255, 6);
-    const static __m128i extend_255 = _mm_set_epi8 (0, 255, 0, 255, 0, 255, 0, 255,
-                                                    0, 255, 0, 255, 0, 255, 0, 255);
+
+    const static __m128i zero       = _mm_set_epi8 (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const static __m128i alpha      = _mm_set_epi8 (255, 14, 255, 14, 255, 14, 255, 14,
+                                                    255,  6, 255,  6, 255,  6, 255,  6);
+    const static __m128i extend_255 = _mm_set_epi8 (0,  255, 0, 255, 0, 255, 0, 255,
+                                                    0,  255, 0, 255, 0, 255, 0, 255);
 
     __m128i front_pxls = _mm_lddqu_si128 (front);       //4 pixels in 16 bytes
     __m128i back_pxls  = _mm_lddqu_si128 (back);
     
-    __m128i low_pixels_b = (__m128i) _mm_movelh_ps ((__m128) back_pxls,  (__m128) zero);  // zero in upper 8 bytes and 2 pixels in lower 8 bytes
-    __m128i low_pixels_f = (__m128i) _mm_movelh_ps ((__m128) front_pxls, (__m128) zero);
+    __m128i low_pixels_b = reinterpret_cast<__m128i> (_mm_movelh_ps (reinterpret_cast<__m128> (back_pxls), 
+                                                                     reinterpret_cast<__m128> (zero)));  // zero in upper 8 bytes and 2 pixels in lower 8 bytes
+    
+    __m128i low_pixels_f = reinterpret_cast<__m128i> (_mm_movelh_ps (reinterpret_cast<__m128> (front_pxls),
+                                                                     reinterpret_cast<__m128> (zero)));
 
 
-    //extend low pixels for correct multiplication
+    // extend low pixels for correct multiplication
     low_pixels_b = _mm_cvtepu8_epi16 (low_pixels_b);
     low_pixels_f = _mm_cvtepu8_epi16 (low_pixels_f);
     
@@ -95,9 +124,13 @@ void blend_pixels_x4 (__m128i* front, __m128i* back) {
 
 
 
-    __m128i up_pixels_b  = (__m128i) _mm_movehl_ps ((__m128) zero, (__m128) back_pxls);  // zero in upper 8 bytes and 2 pixels in lower 8 bytes
-    __m128i up_pixels_f  = (__m128i) _mm_movehl_ps ((__m128) zero, (__m128) front_pxls);
+    __m128i up_pixels_b  = reinterpret_cast<__m128i> (_mm_movehl_ps (reinterpret_cast<__m128> (zero), 
+                                                                     reinterpret_cast<__m128> (back_pxls)));  
 
+    __m128i up_pixels_f  = reinterpret_cast<__m128i> (_mm_movehl_ps (reinterpret_cast<__m128> (zero),
+                                                                     reinterpret_cast<__m128> (front_pxls)));
+
+    // extend low pixels for correct multiplication   
     up_pixels_b  = _mm_cvtepu8_epi16 (low_pixels_b);
     up_pixels_f  = _mm_cvtepu8_epi16 (low_pixels_f);
 
@@ -112,7 +145,8 @@ void blend_pixels_x4 (__m128i* front, __m128i* back) {
                                                                  255, 255, 255, 255, 255, 255, 255, 255));  
     
     
-    back_pxls   = _mm_or_si128 (up_pixels_b, low_pixels_b);                                                     
+    back_pxls   = _mm_or_si128 (up_pixels_b, low_pixels_b);      
+
     _mm_storeu_si128 (back, back_pxls);
 }
 
@@ -143,13 +177,13 @@ void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x, unsigned int p
             oft  = i * f_width;
             oft2 = i * width;
             //printf ("i = %u\n", i);
-            blend_pixels_x4 ((__m128i*) (front_i + oft + j),
-                             (__m128i*) (image + oft2 + oft_start + j));
+            blend_pixels_x4 (reinterpret_cast<__m128i*> ((front_i + oft + j)),
+                             reinterpret_cast<__m128i*> ((image + oft2 + oft_start + j)));
         
         }
     }
     
-    load_to_image (path_result);
+    //load_to_image (path_result);
 
 
 }
@@ -159,15 +193,15 @@ void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x, unsigned int p
 pixel blend_pixels_x1 (pixel& src, pixel& dst) {
     if (src.alpha == 0) return dst;
     
-    float f_alpha = (float)((double)(src.alpha) * (1.0 / 255.0));	
+    float f_alpha = static_cast<float> ((static_cast<float> (src.alpha) * (1.0 / 255.0)));	
     float not_a   = 1.0f - f_alpha;
     
     pixel res;
     
-    res.blue  = lround (float (dst.blue)  * not_a) + src.blue;	
-    res.green = lround (float (dst.green) * not_a) + src.green;
-    res.red   = lround (float (dst.red)   * not_a) + src.red;
-    res.alpha = lround (float (dst.alpha) * not_a) + src.alpha;
+    res.blue  = lround (static_cast<float> (dst.blue)  * not_a) + src.blue;	
+    res.green = lround (static_cast<float> (dst.green) * not_a) + src.green;
+    res.red   = lround (static_cast<float> (dst.red)   * not_a) + src.red;
+    res.alpha = lround (static_cast<float> (dst.alpha) * not_a) + src.alpha;
     
     return res;	
 }
@@ -201,7 +235,7 @@ void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y,
         }
     }
     
-    load_to_image (path_result);
+    //load_to_image (path_result);
 
 }
 
@@ -219,10 +253,11 @@ bmp::bmp (const char* path)
     get_bf (f_in);
 
     header = new BITMAPFILEHEADER (bf);
-    image  = (pixel*) (bf + header->bfOffBits);
+    image  = reinterpret_cast<pixel*> (bf + header->bfOffBits);
     
-    width  = *((uint*) (bf + 18));
-    height = *((uint*) (bf + 22));
+
+    width  = *(reinterpret_cast<uint*> (bf + 18));
+    height = *(reinterpret_cast<uint*> (bf + 22));
     
     fclose (f_in);
 }
@@ -259,11 +294,11 @@ void bmp::load_to_image (const char* path) const {
 }
 
 BITMAPFILEHEADER::BITMAPFILEHEADER (char* bf) {
-        bfType      = *(unsigned int*)        bf;
-        bfSize      = *(unsigned int*)       (bf + 2);
-        bfReserved1 = *(unsigned short int*) (bf + 6);
-        bfReserved2 = *(unsigned short int*) (bf + 8);
-        bfOffBits   = *(unsigned int*)       (bf + 10);
+        bfType      = *reinterpret_cast<uint*>               (bf);
+        bfSize      = *reinterpret_cast<uint*>               (bf + 2);
+        bfReserved1 = *reinterpret_cast<unsigned short int*> (bf + 6);
+        bfReserved2 = *reinterpret_cast<unsigned short int*> (bf + 8);
+        bfOffBits   = *reinterpret_cast<uint*>               (bf + 10);
 }
 
 uint bmp::get_height () const {
