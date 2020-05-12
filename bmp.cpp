@@ -69,20 +69,9 @@ int main () {
     bmp kotik      ("kotik.bmp");
     bmp background ("back.bmp");
     
-    clock_t time = clock();
-    for (int i = 0; i < 3000; ++i) {
-        background.alpha_blend_fast (kotik, 600, 100);
-    }
-    std::cout << "SSE: " << double (clock () - time) / CLOCKS_PER_SEC << std::endl;
+    background.alpha_blend_fast (kotik, 600, 100);
     
-    
-    clock_t time2 = clock();
-    for (int i = 0; i < 3000; ++i) {
-        background.alpha_blend (kotik, 600, 100);
-    }
-    std::cout << "No SSE: " << double (clock () - time2) / CLOCKS_PER_SEC << std::endl;
-
-    return 0;
+   
 }
 
 
@@ -183,7 +172,7 @@ void bmp::alpha_blend_fast (const bmp& front, unsigned int pos_x, unsigned int p
         }
     }
     
-    //load_to_image (path_result);
+    load_to_image (path_result);
 
 
 }
@@ -235,7 +224,7 @@ void bmp::alpha_blend (const bmp& front, unsigned int pos_x, unsigned int pos_y,
         }
     }
     
-    //load_to_image (path_result);
+    load_to_image (path_result);
 
 }
 
